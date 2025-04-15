@@ -1,5 +1,6 @@
 # 100 MHz internal clock
 set_property -dict {PACKAGE_PIN R4 IOSTANDARD LVCMOS33} [get_ports {clock}]
+create_clock -period 10.000 -waveform {0.000 5.000} [get_ports {clock}]
 
 # 7-segment display
 set_property -dict {PACKAGE_PIN M2 IOSTANDARD LVCMOS33} [get_ports {sel[0]}]
