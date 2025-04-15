@@ -33,7 +33,7 @@ module UART_MEM(
     );
 
     parameter CLKS_PER_BIT = 16'd10417;  // 100M/9600
-    parameter MEM_SIZE = 512;
+    parameter MEM_SIZE = 32;
 
 
     /*--------------------------------UART RX-------------------------*/
