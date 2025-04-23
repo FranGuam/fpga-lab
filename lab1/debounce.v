@@ -10,14 +10,14 @@ module debounce(clk,key_i,key_o);
     reg key_o_temp;
 
     reg key_m;
-	reg key_i_t1,key_i_t2;
+    reg key_i_t1,key_i_t2;
 
     assign key_o = key_o_temp;
-	
-	always @ (posedge clk) begin
-		key_i_t1 <= key_i;
-		key_i_t2 <= key_i_t1;
-	end
+
+    always @ (posedge clk) begin
+        key_i_t1 <= key_i;
+        key_i_t2 <= key_i_t1;
+    end
 
     always @ (posedge clk) begin
         if (key_m!=key_i_t2) begin
@@ -30,4 +30,3 @@ module debounce(clk,key_i,key_o);
         else count <= count+1;
     end
 endmodule
-
