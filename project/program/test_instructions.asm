@@ -1,6 +1,5 @@
 # lui $a0, 0x1001
 
-main_entry:
 # addi
 addi $t0, $zero, 0x1234
 
@@ -91,7 +90,7 @@ jr $ra
 JALR:
 la $a2, BNE
 jalr $a1, $a2
-j main_entry
+j Extended_Cases
 
 # bne
 BNE:
@@ -122,3 +121,19 @@ ORI:
 ori $t0, $t1, 0xffff
 
 jr $a1
+
+Extended_Cases:
+
+# RAW hazard
+addi $t0, $zero, 0x1234
+nop
+nop
+add $t0, $t0, $t0
+nop
+add $t0, $t0, $t0
+add $t0, $t0, $t0
+
+# Load-use hazard
+sw $t0, 0($a0)
+lw $v1, 0($a0)
+add $v1, $v1, $v1

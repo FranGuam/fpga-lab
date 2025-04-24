@@ -8,17 +8,20 @@ module top(
     output            tx
 );
 
-    parameter CLK_FREQ = 50000000;
+    parameter CLK_FREQ = 100000000;
 
     wire clk;
     wire locked;
 
-    clk_wiz_0 clkwiz(
-        .clk_out1 (clk    ),
-        .reset    (key5   ),
-        .locked   (locked ),
-        .clk_in1  (clock  )
-    );
+    assign clk = clock;
+    assign locked = 1'b1;
+
+    // clk_wiz_0 clkwiz(
+    //     .clk_out1 (clk    ),
+    //     .reset    (key5   ),
+    //     .locked   (locked ),
+    //     .clk_in1  (clock  )
+    // );
 
     wire             Device_Read;
     wire             Device_Write;

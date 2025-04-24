@@ -26,7 +26,7 @@ module test_cpu();
     );
 
     // Test status and statistics
-    parameter TOTAL_CYCLES = 60;
+    parameter TOTAL_CYCLES = 80;
 
     integer cycle_count;
     integer total_tests;
