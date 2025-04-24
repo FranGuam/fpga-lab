@@ -1,0 +1,127 @@
+// Format: [Cycle %d] [Type %s] [Address/Register %h] [Expected Value %h]
+
+// addi
+5 reg 08 00001234
+
+// addiu
+6 reg 09 ffffbcdf
+
+// add
+7 reg 0a ffffcf13
+
+// addu
+8 reg 0b ffffcf13
+
+// sub
+9 reg 0c 00005555
+
+// subu
+10 reg 0d ffffaaab
+
+// mul
+11 reg 0e fb3a0b4c
+
+// and
+12 reg 0f 00001014
+
+// andi
+13 reg 10 0000bcdf
+
+// or
+14 reg 11 ffffbeff
+
+// xor
+15 reg 12 ffffaeeb
+
+// nor
+16 reg 13 00004100
+
+// sll
+17 reg 14 12340000
+
+// srl
+18 reg 15 0ffffbcd
+
+// sra
+19 reg 16 fffffbcd
+
+// slt
+20 reg 17 00000000
+
+// sltu
+21 reg 18 00000001
+
+// slti
+22 reg 19 00000000
+
+// sltiu
+23 reg 1a 00000001
+
+// lui
+24 reg 1b abcd0000
+
+// sw
+25 reg 1b abcd1234
+25 mem 00000004 abcd1234
+
+// lw
+27 reg 04 00000008
+28 reg 02 abcd1234
+
+// beq
+24 pc 0 00000060
+25 pc 0 00000064
+26 pc 0 00000068
+27 pc 0 0000006c
+28 pc 0 0000006c
+
+// jal
+29 pc 0 00000070
+30 pc 0 00000074
+33 reg 1f 00000070
+
+// jr
+31 pc 0 00000078
+32 pc 0 00000070
+
+// j
+33 pc 0 00000074
+34 pc 0 00000078
+
+// jalr
+39 reg 06 00000084
+35 pc 0 0000007c
+40 reg 05 00000080
+36 pc 0 00000080
+37 pc 0 00000084
+
+54 pc 0 000000b8
+55 pc 0 000000bc
+56 pc 0 00000080
+
+// bne
+38 pc 0 00000088
+39 pc 0 0000008c
+40 pc 0 00000090
+41 pc 0 00000090
+
+// blez
+42 pc 0 00000094
+43 pc 0 00000098
+44 pc 0 0000009c
+45 pc 0 0000009c
+
+// bgtz
+46 pc 0 000000a0
+47 pc 0 000000a4
+48 pc 0 000000a8
+49 pc 0 000000a8
+
+// bltz
+50 pc 0 000000ac
+51 pc 0 000000b0
+52 pc 0 000000b4
+53 pc 0 000000b4
+
+// ori
+58 reg 08 ffffffff
