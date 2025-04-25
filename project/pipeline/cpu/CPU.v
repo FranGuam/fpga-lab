@@ -26,7 +26,7 @@ module CPU(
     assign PC_next =
         Branch_condition? Branch_target:
         (PCSrc == 2'b00)? PC_plus_4:
-        (PCSrc == 2'b01)? Jump_target: Jump_register;
+        (PCSrc == 2'b01)? Jump_target: Databus1_forwarded;
 
     // Instruction Memory
     wire [32 - 1: 0] Instruction;
@@ -108,6 +108,16 @@ module CPU(
         .Write_data     (MEM_WB_Databus3          )
     );
 
+    wire [32 - 1: 0] Databus1_forwarded;
+    wire [32 - 1: 0] Databus2_forwarded;
+
+    assign Databus1_forwarded =
+        (ForwardA == 2'b10)? ALU_out:
+        (ForwardA == 2'b01)? Databus3: Databus1;
+    assign Databus2_forwarded =
+        (ForwardB == 2'b10)? ALU_out:
+        (ForwardB == 2'b01)? Databus3: Databus2;
+
     // Extend
     wire [32 - 1: 0] Ext_out;
     assign Ext_out = {ExtOp? {16{IF_ID_Instruction[15]}}: 16'h0000, IF_ID_Instruction[15:0]};
@@ -118,10 +128,6 @@ module CPU(
     // PC jump
     wire [32 - 1: 0] Jump_target;
     assign Jump_target = {IF_ID_PC_plus_4[31:28], IF_ID_Instruction[25:0], 2'b00};
-    wire [32 - 1: 0] Jump_register;
-    assign Jump_register =
-        (ForwardJump == 2'b10)? Databus3:
-        (ForwardJump == 2'b01)? ALU_out: Databus1;
 
     /* ID/EX pipeline registers */
 
@@ -186,8 +192,8 @@ module CPU(
             ID_EX_MemtoReg <= MemtoReg;
             ID_EX_RegWrite <= RegWrite;
             ID_EX_Write_register <= Write_register;
-            ID_EX_Databus1 <= Databus1;
-            ID_EX_Databus2 <= Databus2;
+            ID_EX_Databus1 <= Databus1_forwarded;
+            ID_EX_Databus2 <= Databus2_forwarded;
             ID_EX_LU_out <= LU_out;
         end
     end
@@ -206,21 +212,12 @@ module CPU(
     );
 
     // ALU
-    wire [32 - 1: 0] Databus1_forwarded;
-    wire [32 - 1: 0] Databus2_forwarded;
     wire [32 - 1: 0] ALU_in1;
     wire [32 - 1: 0] ALU_in2;
     wire [32 - 1: 0] ALU_out;
 
-    assign Databus1_forwarded =
-        (ForwardA == 2'b10)? EX_MEM_ALU_out:
-        (ForwardA == 2'b01)? MEM_WB_Databus3: ID_EX_Databus1;
-    assign Databus2_forwarded =
-        (ForwardB == 2'b10)? EX_MEM_ALU_out:
-        (ForwardB == 2'b01)? MEM_WB_Databus3: ID_EX_Databus2;
-
-    assign ALU_in1 = ID_EX_ALUSrc1? {27'h00000, ID_EX_Instruction[10:6]}: Databus1_forwarded;
-    assign ALU_in2 = ID_EX_ALUSrc2? ID_EX_LU_out: Databus2_forwarded;
+    assign ALU_in1 = ID_EX_ALUSrc1? {27'h00000, ID_EX_Instruction[10:6]}: ID_EX_Databus1;
+    assign ALU_in2 = ID_EX_ALUSrc2? ID_EX_LU_out: ID_EX_Databus2;
 
     ALU alu1(
         .in1    (ALU_in1 ),
@@ -233,11 +230,11 @@ module CPU(
     // PC branch
     wire Branch_condition;
     assign Branch_condition =
-        (ID_EX_Instruction[31:26] == 6'h04 && Databus1_forwarded == Databus2_forwarded) ||
-        (ID_EX_Instruction[31:26] == 6'h05 && Databus1_forwarded != Databus2_forwarded) ||
-        (ID_EX_Instruction[31:26] == 6'h06 && (Databus1_forwarded[31] == 1'b1 || Databus1_forwarded == 0)) ||
-        (ID_EX_Instruction[31:26] == 6'h07 && (Databus1_forwarded[31] == 1'b0 && Databus1_forwarded != 0)) ||
-        (ID_EX_Instruction[31:26] == 6'h01 && Databus1_forwarded[31] == 1'b1);
+        (ID_EX_Instruction[31:26] == 6'h04 && ID_EX_Databus1 == ID_EX_Databus2) ||
+        (ID_EX_Instruction[31:26] == 6'h05 && ID_EX_Databus1 != ID_EX_Databus2) ||
+        (ID_EX_Instruction[31:26] == 6'h06 && (ID_EX_Databus1[31] == 1'b1 || ID_EX_Databus1 == 0)) ||
+        (ID_EX_Instruction[31:26] == 6'h07 && (ID_EX_Databus1[31] == 1'b0 && ID_EX_Databus1 != 0)) ||
+        (ID_EX_Instruction[31:26] == 6'h01 && ID_EX_Databus1[31] == 1'b1);
     wire [32 - 1: 0] Branch_target;
     assign Branch_target = ID_EX_PC_plus_4 + {ID_EX_LU_out[29:0], 2'b00};
 
@@ -285,7 +282,7 @@ module CPU(
             EX_MEM_RegWrite <= ID_EX_RegWrite;
             EX_MEM_Write_register <= ID_EX_Write_register;
             EX_MEM_ALU_out <= ALU_out;
-            EX_MEM_Databus2 <= Databus2_forwarded;
+            EX_MEM_Databus2 <= ID_EX_Databus2;
         end
     end
 
@@ -355,21 +352,16 @@ module CPU(
 
     wire [2 - 1: 0] ForwardA;
     wire [2 - 1: 0] ForwardB;
-    wire [2 - 1: 0] ForwardJump;
 
     ForwardingUnit forwarding_unit1(
         .IF_ID_Rs              (IF_ID_Instruction[25:21] ),
-        .ID_EX_Rs              (ID_EX_Instruction[25:21] ),
-        .ID_EX_Rt              (ID_EX_Instruction[20:16] ),
+        .IF_ID_Rt              (IF_ID_Instruction[20:16] ),
         .ID_EX_Write_register  (ID_EX_Write_register     ),
         .EX_MEM_Write_register (EX_MEM_Write_register    ),
-        .MEM_WB_Write_register (MEM_WB_Write_register    ),
         .ID_EX_RegWrite        (ID_EX_RegWrite           ),
         .EX_MEM_RegWrite       (EX_MEM_RegWrite          ),
-        .MEM_WB_RegWrite       (MEM_WB_RegWrite          ),
         .ForwardA              (ForwardA                 ),
-        .ForwardB              (ForwardB                 ),
-        .ForwardJump           (ForwardJump              )
+        .ForwardB              (ForwardB                 )
     );
 
     /* Hazard Detection Unit */
