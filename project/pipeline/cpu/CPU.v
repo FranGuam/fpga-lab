@@ -24,7 +24,7 @@ module CPU(
     assign PC_plus_4 = PC + 32'd4;
 
     assign PC_next =
-        (ID_EX_Branch && Branch_condition)? Branch_target:
+        Branch_condition? Branch_target:
         (PCSrc == 2'b00)? PC_plus_4:
         (PCSrc == 2'b01)? Jump_target: Jump_register;
 
@@ -60,7 +60,6 @@ module CPU(
 
     // Control
     wire [2 - 1: 0] PCSrc;
-    wire            Branch;
     wire            RegWrite;
     wire [2 - 1: 0] RegDst;
     wire            MemRead;
@@ -76,7 +75,6 @@ module CPU(
         .OpCode   (IF_ID_Instruction[31:26] ),
         .Funct    (IF_ID_Instruction[5:0]   ),
         .PCSrc    (PCSrc                    ),
-        .Branch   (Branch                   ),
         .RegWrite (RegWrite                 ),
         .RegDst   (RegDst                   ),
         .MemRead  (MemRead                  ),
@@ -133,7 +131,6 @@ module CPU(
     reg             ID_EX_ALUSrc1;
     reg             ID_EX_ALUSrc2;
     reg [4  - 1: 0] ID_EX_ALUOp;
-    reg             ID_EX_Branch;
 
     reg             ID_EX_MemRead;
     reg             ID_EX_MemWrite;
@@ -152,7 +149,6 @@ module CPU(
         ID_EX_ALUSrc1 <= 1'b0;
         ID_EX_ALUSrc2 <= 1'b0;
         ID_EX_ALUOp <= 4'h0;
-        ID_EX_Branch <= 1'b0;
         ID_EX_MemRead <= 1'b0;
         ID_EX_MemWrite <= 1'b0;
         ID_EX_MemtoReg <= 2'b00;
@@ -170,7 +166,6 @@ module CPU(
             ID_EX_ALUSrc1 <= 1'b0;
             ID_EX_ALUSrc2 <= 1'b0;
             ID_EX_ALUOp <= 4'h0;
-            ID_EX_Branch <= 1'b0;
             ID_EX_MemRead <= 1'b0;
             ID_EX_MemWrite <= 1'b0;
             ID_EX_MemtoReg <= 2'b00;
@@ -186,7 +181,6 @@ module CPU(
             ID_EX_ALUSrc1 <= ALUSrc1;
             ID_EX_ALUSrc2 <= ALUSrc2;
             ID_EX_ALUOp <= ALUOp;
-            ID_EX_Branch <= Branch;
             ID_EX_MemRead <= MemRead;
             ID_EX_MemWrite <= MemWrite;
             ID_EX_MemtoReg <= MemtoReg;
@@ -217,7 +211,6 @@ module CPU(
     wire [32 - 1: 0] ALU_in1;
     wire [32 - 1: 0] ALU_in2;
     wire [32 - 1: 0] ALU_out;
-    wire             Zero;
 
     assign Databus1_forwarded =
         (ForwardA == 2'b10)? EX_MEM_ALU_out:
@@ -234,18 +227,17 @@ module CPU(
         .in2    (ALU_in2 ),
         .ALUCtl (ALUCtl  ),
         .Sign   (Sign    ),
-        .out    (ALU_out ),
-        .zero   (Zero    )
+        .out    (ALU_out )
     );
 
     // PC branch
     wire Branch_condition;
     assign Branch_condition =
-        (ID_EX_Instruction[31:26] == 6'h04 && Zero) ||
-        (ID_EX_Instruction[31:26] == 6'h05 && !Zero) ||
-        (ID_EX_Instruction[31:26] == 6'h06 && (ALU_out[31] == 1'b1 || Zero)) ||
-        (ID_EX_Instruction[31:26] == 6'h07 && (ALU_out[31] == 1'b0 && !Zero)) ||
-        (ID_EX_Instruction[31:26] == 6'h01 && (ALU_out[31] == 1'b1));
+        (ID_EX_Instruction[31:26] == 6'h04 && Databus1_forwarded == Databus2_forwarded) ||
+        (ID_EX_Instruction[31:26] == 6'h05 && Databus1_forwarded != Databus2_forwarded) ||
+        (ID_EX_Instruction[31:26] == 6'h06 && (Databus1_forwarded[31] == 1'b1 || Databus1_forwarded == 0)) ||
+        (ID_EX_Instruction[31:26] == 6'h07 && (Databus1_forwarded[31] == 1'b0 && Databus1_forwarded != 0)) ||
+        (ID_EX_Instruction[31:26] == 6'h01 && Databus1_forwarded[31] == 1'b1);
     wire [32 - 1: 0] Branch_target;
     assign Branch_target = ID_EX_PC_plus_4 + {ID_EX_LU_out[29:0], 2'b00};
 
@@ -388,16 +380,16 @@ module CPU(
     wire ID_EX_Flush;
 
     HazardUnit hazard_unit1(
-        .IF_ID_Rs      (IF_ID_Instruction[25:21]         ),
-        .IF_ID_Rt      (IF_ID_Instruction[20:16]         ),
-        .ID_EX_Rt      (ID_EX_Instruction[20:16]         ),
-        .ID_EX_MemRead (ID_EX_MemRead                    ),
-        .Jump          (PCSrc != 2'b00                   ),
-        .Branch        (ID_EX_Branch && Branch_condition ),
-        .PC_Stall      (PC_Stall                         ),
-        .IF_ID_Flush   (IF_ID_Flush                      ),
-        .IF_ID_Stall   (IF_ID_Stall                      ),
-        .ID_EX_Flush   (ID_EX_Flush                      )
+        .IF_ID_Rs      (IF_ID_Instruction[25:21] ),
+        .IF_ID_Rt      (IF_ID_Instruction[20:16] ),
+        .ID_EX_Rt      (ID_EX_Instruction[20:16] ),
+        .ID_EX_MemRead (ID_EX_MemRead            ),
+        .Jump          (PCSrc != 2'b00           ),
+        .Branch        (Branch_condition         ),
+        .PC_Stall      (PC_Stall                 ),
+        .IF_ID_Flush   (IF_ID_Flush              ),
+        .IF_ID_Stall   (IF_ID_Stall              ),
+        .ID_EX_Flush   (ID_EX_Flush              )
     );
 
 endmodule
