@@ -31,6 +31,10 @@ module CPU(
     // Instruction Memory
     wire [32 - 1: 0] Instruction;
     InstructionMemory instruction_memory1(
+        .reset       (reset       ),
+        .clk         (clk         ),
+        .IF_ID_Flush (IF_ID_Flush ),
+        .IF_ID_Stall (IF_ID_Stall ),
         .Address     (PC          ),
         .Instruction (Instruction )
     );
@@ -38,23 +42,22 @@ module CPU(
     /* IF/ID pipeline registers */
 
     reg  [32 - 1: 0] IF_ID_PC_plus_4;
-    reg  [32 - 1: 0] IF_ID_Instruction;
+    wire [32 - 1: 0] IF_ID_Instruction;
 
     initial begin
         IF_ID_PC_plus_4 <= 32'h00000000;
-        IF_ID_Instruction <= 32'h00000000;
     end
 
     always @(posedge clk or posedge reset) begin
         if (reset || IF_ID_Flush) begin
             IF_ID_PC_plus_4 <= 32'h00000000;
-            IF_ID_Instruction <= 32'h00000000;
         end
         else if (!IF_ID_Stall) begin
             IF_ID_PC_plus_4 <= PC_plus_4;
-            IF_ID_Instruction <= Instruction;
         end
     end
+
+    assign IF_ID_Instruction = Instruction;
 
     /* ID stage */
 
