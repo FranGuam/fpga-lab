@@ -10,12 +10,19 @@ module ALU(
     wire lt_signed;
     assign lt_signed = (in1[31] ^ in2[31])? (in1[31] == 1'b1 && in2[31] == 1'b0): (in1[30:0] < in2[30:0]);
 
+    wire [32 - 1: 0] mult_out;
+    mult_gen_0 mult1(
+        .A (in1      ),
+        .B (in2      ),
+        .P (mult_out )
+    );
+
     // different ALU operations
     always @(*) begin
         case (ALUCtl)
             4'd0: out <= in1 + in2;
             4'd1: out <= in1 - in2;
-            4'd2: out <= in1 * in2;
+            4'd2: out <= mult_out;
             4'd4: out <= in1 & in2;
             4'd5: out <= in1 | in2;
             4'd6: out <= in1 ^ in2;
