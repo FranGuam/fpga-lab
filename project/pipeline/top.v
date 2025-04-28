@@ -8,7 +8,7 @@ module top(
     output            tx
 );
 
-    parameter CLK_FREQ = 150000000;
+    parameter CLK_FREQ = 200000000;
 
     wire clk;
     wire locked;

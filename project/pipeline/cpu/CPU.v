@@ -24,9 +24,8 @@ module CPU(
     assign PC_plus_4 = PC + 32'd4;
 
     assign PC_next =
-        Branch_condition? Branch_target:
-        (PCSrc == 2'b00)? PC_plus_4:
-        (PCSrc == 2'b01)? Jump_target: Databus1_forwarded;
+        (ID_EX_PCSrc == 2'b00)? (Branch_condition? Branch_target: PC_plus_4):
+        (ID_EX_PCSrc == 2'b01)? Jump_target: ID_EX_Databus1;
 
     // Instruction Memory
     wire [32 - 1: 0] Instruction;
@@ -125,15 +124,12 @@ module CPU(
     wire [32 - 1: 0] LU_out;
     assign LU_out = LuOp? {IF_ID_Instruction[15:0], 16'h0000}: Ext_out;
 
-    // PC jump
-    wire [32 - 1: 0] Jump_target;
-    assign Jump_target = {IF_ID_PC_plus_4[31:28], IF_ID_Instruction[25:0], 2'b00};
-
     /* ID/EX pipeline registers */
 
     reg [32 - 1: 0] ID_EX_PC_plus_4;
     reg [32 - 1: 0] ID_EX_Instruction;
 
+    reg [2  - 1: 0] ID_EX_PCSrc;
     reg             ID_EX_ALUSrc1;
     reg             ID_EX_ALUSrc2;
     reg [4  - 1: 0] ID_EX_ALUOp;
@@ -152,6 +148,7 @@ module CPU(
     initial begin
         ID_EX_PC_plus_4 <= 32'h00000000;
         ID_EX_Instruction <= 32'h00000000;
+        ID_EX_PCSrc <= 2'b00;
         ID_EX_ALUSrc1 <= 1'b0;
         ID_EX_ALUSrc2 <= 1'b0;
         ID_EX_ALUOp <= 4'h0;
@@ -169,6 +166,7 @@ module CPU(
         if (reset || ID_EX_Flush) begin
             ID_EX_PC_plus_4 <= 32'h00000000;
             ID_EX_Instruction <= 32'h00000000;
+            ID_EX_PCSrc <= 2'b00;
             ID_EX_ALUSrc1 <= 1'b0;
             ID_EX_ALUSrc2 <= 1'b0;
             ID_EX_ALUOp <= 4'h0;
@@ -184,6 +182,7 @@ module CPU(
         else begin
             ID_EX_PC_plus_4 <= IF_ID_PC_plus_4;
             ID_EX_Instruction <= IF_ID_Instruction;
+            ID_EX_PCSrc <= PCSrc;
             ID_EX_ALUSrc1 <= ALUSrc1;
             ID_EX_ALUSrc2 <= ALUSrc2;
             ID_EX_ALUOp <= ALUOp;
@@ -227,7 +226,10 @@ module CPU(
         .out    (ALU_out )
     );
 
-    // PC branch
+    // PC jump and branch
+    wire [32 - 1: 0] Jump_target;
+    assign Jump_target = {ID_EX_PC_plus_4[31:28], ID_EX_Instruction[25:0], 2'b00};
+
     wire Branch_condition;
     assign Branch_condition =
         (ID_EX_Instruction[31:26] == 6'h04 && ID_EX_Databus1 == ID_EX_Databus2) ||
@@ -376,7 +378,7 @@ module CPU(
         .IF_ID_Rt      (IF_ID_Instruction[20:16] ),
         .ID_EX_Rt      (ID_EX_Instruction[20:16] ),
         .ID_EX_MemRead (ID_EX_MemRead            ),
-        .Jump          (PCSrc != 2'b00           ),
+        .Jump          (ID_EX_PCSrc != 2'b00     ),
         .Branch        (Branch_condition         ),
         .PC_Stall      (PC_Stall                 ),
         .IF_ID_Flush   (IF_ID_Flush              ),

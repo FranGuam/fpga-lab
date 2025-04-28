@@ -18,10 +18,10 @@ module HazardUnit(
     assign Stall_one = Load_use_hazard;
 
     wire Flush_one;
-    assign Flush_one = Jump;
+    assign Flush_one = 0;
 
     wire Flush_two;
-    assign Flush_two = Branch;
+    assign Flush_two = Jump || Branch;
 
     assign PC_Stall = Stall_one;
     assign IF_ID_Flush = Flush_one || Flush_two;
