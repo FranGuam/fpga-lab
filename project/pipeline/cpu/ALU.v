@@ -15,7 +15,6 @@ module ALU(
         case (ALUCtl)
             4'd0: out <= in1 + in2;
             4'd1: out <= in1 - in2;
-            4'd2: out <= in1 * in2;
             4'd4: out <= in1 & in2;
             4'd5: out <= in1 | in2;
             4'd6: out <= in1 ^ in2;
