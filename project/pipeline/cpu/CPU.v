@@ -24,8 +24,8 @@ module CPU(
     assign PC_plus_4 = PC + 32'd4;
 
     assign PC_next =
-        Branch_condition? Branch_target:
-        (PCSrc == 2'b00)? PC_plus_4:
+        Branch_missed? (Branch_condition? Branch_target: ID_EX_PC_plus_4):
+        (PCSrc == 2'b00)? ((BHT_hit && Predict_taken)? Predict_target: PC_plus_4):
         (PCSrc == 2'b01)? Jump_target: Databus1_forwarded;
 
     // Instruction Memory
@@ -43,17 +43,25 @@ module CPU(
 
     reg  [32 - 1: 0] IF_ID_PC_plus_4;
     wire [32 - 1: 0] IF_ID_Instruction;
+    reg              IF_ID_BHT_hit;
+    reg              IF_ID_Predicted_taken;
 
     initial begin
         IF_ID_PC_plus_4 <= 32'h00000000;
+        IF_ID_BHT_hit <= 1'b0;
+        IF_ID_Predicted_taken <= 1'b0;
     end
 
     always @(posedge clk or posedge reset) begin
         if (reset || IF_ID_Flush) begin
             IF_ID_PC_plus_4 <= 32'h00000000;
+            IF_ID_BHT_hit <= 1'b0;
+            IF_ID_Predicted_taken <= 1'b0;
         end
         else if (!IF_ID_Stall) begin
             IF_ID_PC_plus_4 <= PC_plus_4;
+            IF_ID_BHT_hit <= BHT_hit;
+            IF_ID_Predicted_taken <= Predict_taken;
         end
     end
 
@@ -63,6 +71,7 @@ module CPU(
 
     // Control
     wire [2 - 1: 0] PCSrc;
+    wire            Branch;
     wire            RegWrite;
     wire [2 - 1: 0] RegDst;
     wire            MemRead;
@@ -78,6 +87,7 @@ module CPU(
         .OpCode   (IF_ID_Instruction[31:26] ),
         .Funct    (IF_ID_Instruction[5:0]   ),
         .PCSrc    (PCSrc                    ),
+        .Branch   (Branch                   ),
         .RegWrite (RegWrite                 ),
         .RegDst   (RegDst                   ),
         .MemRead  (MemRead                  ),
@@ -140,6 +150,9 @@ module CPU(
     reg             ID_EX_ALUSrc1;
     reg             ID_EX_ALUSrc2;
     reg [4  - 1: 0] ID_EX_ALUOp;
+    reg             ID_EX_Branch;
+    reg             ID_EX_BHT_hit;
+    reg             ID_EX_Predicted_taken;
 
     reg             ID_EX_MemRead;
     reg             ID_EX_MemWrite;
@@ -158,6 +171,9 @@ module CPU(
         ID_EX_ALUSrc1 <= 1'b0;
         ID_EX_ALUSrc2 <= 1'b0;
         ID_EX_ALUOp <= 4'h0;
+        ID_EX_Branch <= 1'b0;
+        ID_EX_BHT_hit <= 1'b0;
+        ID_EX_Predicted_taken <= 1'b0;
         ID_EX_MemRead <= 1'b0;
         ID_EX_MemWrite <= 1'b0;
         ID_EX_MemtoReg <= 2'b00;
@@ -175,6 +191,9 @@ module CPU(
             ID_EX_ALUSrc1 <= 1'b0;
             ID_EX_ALUSrc2 <= 1'b0;
             ID_EX_ALUOp <= 4'h0;
+            ID_EX_Branch <= 1'b0;
+            ID_EX_BHT_hit <= 1'b0;
+            ID_EX_Predicted_taken <= 1'b0;
             ID_EX_MemRead <= 1'b0;
             ID_EX_MemWrite <= 1'b0;
             ID_EX_MemtoReg <= 2'b00;
@@ -190,6 +209,9 @@ module CPU(
             ID_EX_ALUSrc1 <= ALUSrc1;
             ID_EX_ALUSrc2 <= ALUSrc2;
             ID_EX_ALUOp <= ALUOp;
+            ID_EX_Branch <= Branch;
+            ID_EX_BHT_hit <= IF_ID_BHT_hit;
+            ID_EX_Predicted_taken <= IF_ID_Predicted_taken;
             ID_EX_MemRead <= MemRead;
             ID_EX_MemWrite <= MemWrite;
             ID_EX_MemtoReg <= MemtoReg;
@@ -240,6 +262,8 @@ module CPU(
         (ID_EX_Instruction[31:26] == 6'h01 && ID_EX_Databus1[31] == 1'b1);
     wire [32 - 1: 0] Branch_target;
     assign Branch_target = ID_EX_PC_plus_4 + {ID_EX_LU_out[29:0], 2'b00};
+    wire Branch_missed;
+    assign Branch_missed = ID_EX_BHT_hit? (Branch_condition != ID_EX_Predicted_taken): Branch_condition;
 
     /* EX/MEM pipeline registers */
 
@@ -380,11 +404,29 @@ module CPU(
         .ID_EX_Rt      (ID_EX_Instruction[20:16] ),
         .ID_EX_MemRead (ID_EX_MemRead            ),
         .Jump          (PCSrc != 2'b00           ),
-        .Branch        (Branch_condition         ),
+        .Branch_missed (Branch_missed            ),
         .PC_Stall      (PC_Stall                 ),
         .IF_ID_Flush   (IF_ID_Flush              ),
         .IF_ID_Stall   (IF_ID_Stall              ),
         .ID_EX_Flush   (ID_EX_Flush              )
+    );
+
+    /* Branch Predictor */
+
+    wire             BHT_hit;
+    wire             Predict_taken;
+    wire [32 - 1: 0] Predict_target;
+    BranchPredictor branch_predictor1(
+        .reset          (reset            ),
+        .clk            (clk              ),
+        .PC_IF          (PC_plus_4        ),
+        .PC_EX          (ID_EX_PC_plus_4  ),
+        .ID_EX_Branch   (ID_EX_Branch     ),
+        .Branch_taken   (Branch_condition ),
+        .Branch_target  (Branch_target    ),
+        .BHT_hit        (BHT_hit          ),
+        .Predict_taken  (Predict_taken    ),
+        .Predict_target (Predict_target   )
     );
 
 endmodule

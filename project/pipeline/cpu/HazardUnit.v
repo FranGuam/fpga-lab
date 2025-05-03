@@ -4,7 +4,7 @@ module HazardUnit(
     input  [5 - 1: 0] ID_EX_Rt,
     input             ID_EX_MemRead,
     input             Jump,
-    input             Branch,
+    input             Branch_missed,
     output            PC_Stall,
     output            IF_ID_Flush,
     output            IF_ID_Stall,
@@ -21,7 +21,7 @@ module HazardUnit(
     assign Flush_one = Jump;
 
     wire Flush_two;
-    assign Flush_two = Branch;
+    assign Flush_two = Branch_missed;
 
     assign PC_Stall = Stall_one;
     assign IF_ID_Flush = Flush_one || Flush_two;

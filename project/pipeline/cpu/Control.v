@@ -2,6 +2,7 @@ module Control(
     input  [6 - 1: 0] OpCode,
     input  [6 - 1: 0] Funct,
     output [2 - 1: 0] PCSrc,
+    output            Branch,
     output            RegWrite,
     output [2 - 1: 0] RegDst,
     output            MemRead,
@@ -13,8 +14,6 @@ module Control(
     output            LuOp,
     output [4 - 1: 0] ALUOp
 );
-
-    wire Branch;
 
     assign PCSrc[0] = (OpCode == 6'h02 || OpCode == 6'h03);
     assign PCSrc[1] = (OpCode == 6'h00 && (Funct == 6'h08 || Funct == 6'h09));
