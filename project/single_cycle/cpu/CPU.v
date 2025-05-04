@@ -14,7 +14,7 @@ module CPU(
     wire [32 - 1: 0] PC_plus_4;
 
     initial PC = 32'h00000000;
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clk) begin
         if (reset) PC <= 32'h00000000;
         else PC <= PC_next;
     end
@@ -24,7 +24,9 @@ module CPU(
     // Instruction Memory
     wire [32 - 1: 0] Instruction;
     InstructionMemory instruction_memory1(
-        .Address     (PC          ),
+        .reset       (reset       ),
+        .clk         (clk         ),
+        .Address     (PC_next     ),
         .Instruction (Instruction )
     );
 
