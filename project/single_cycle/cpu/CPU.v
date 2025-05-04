@@ -122,7 +122,7 @@ module CPU(
     wire             Memory_Write;
     wire [32 - 1: 0] MemBus_Read_Data;
 
-    assign MemBus_Address = ALU_out;
+    assign MemBus_Address = Databus1 + Ext_out;
     assign is_Memory = MemBus_Address < 32'h40000000;
     assign Memory_Read = MemRead && is_Memory;
     assign Memory_Write = MemWrite && is_Memory;
