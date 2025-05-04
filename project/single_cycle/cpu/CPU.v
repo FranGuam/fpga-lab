@@ -30,7 +30,6 @@ module CPU(
 
     // Control
     wire [2 - 1: 0] PCSrc;
-    wire            Branch;
     wire            RegWrite;
     wire [2 - 1: 0] RegDst;
     wire            MemRead;
@@ -46,7 +45,6 @@ module CPU(
         .OpCode   (Instruction[31:26] ),
         .Funct    (Instruction[5:0]   ),
         .PCSrc    (PCSrc              ),
-        .Branch   (Branch             ),
         .RegWrite (RegWrite           ),
         .RegDst   (RegDst             ),
         .MemRead  (MemRead            ),
@@ -103,7 +101,6 @@ module CPU(
     wire [32 - 1: 0] ALU_in1;
     wire [32 - 1: 0] ALU_in2;
     wire [32 - 1: 0] ALU_out;
-    wire             Zero;
 
     assign ALU_in1 = ALUSrc1? {27'h00000, Instruction[10:6]}: Databus1;
     assign ALU_in2 = ALUSrc2? LU_out: Databus2;
@@ -113,8 +110,7 @@ module CPU(
         .in2    (ALU_in2 ),
         .ALUCtl (ALUCtl  ),
         .Sign   (Sign    ),
-        .out    (ALU_out ),
-        .zero   (Zero    )
+        .out    (ALU_out )
     );
 
     // Data Memory
@@ -154,13 +150,13 @@ module CPU(
 
     wire Branch_condition;
     assign Branch_condition =
-        (Instruction[31:26] == 6'h04 && Zero) ||
-        (Instruction[31:26] == 6'h05 && !Zero) ||
-        (Instruction[31:26] == 6'h06 && (ALU_out[31] == 1'b1 || Zero)) ||
-        (Instruction[31:26] == 6'h07 && (ALU_out[31] == 1'b0 && !Zero)) ||
-        (Instruction[31:26] == 6'h01 && (ALU_out[31] == 1'b1));
+        (Instruction[31:26] == 6'h04 && Databus1 == Databus2) ||
+        (Instruction[31:26] == 6'h05 && Databus1 != Databus2) ||
+        (Instruction[31:26] == 6'h06 && (Databus1[31] == 1'b1 || Databus1 == 0)) ||
+        (Instruction[31:26] == 6'h07 && (Databus1[31] == 1'b0 && Databus1 != 0)) ||
+        (Instruction[31:26] == 6'h01 && Databus1[31] == 1'b1);
     wire [32 - 1: 0] Branch_target;
-    assign Branch_target = (Branch & Branch_condition)? (PC_plus_4 + {LU_out[29:0], 2'b00}): PC_plus_4;
+    assign Branch_target = Branch_condition? (PC_plus_4 + {LU_out[29:0], 2'b00}): PC_plus_4;
 
     assign PC_next =
         (PCSrc == 2'b00)? Branch_target:

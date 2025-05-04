@@ -3,12 +3,8 @@ module ALU(
     input      [32 - 1: 0] in2,
     input      [4  - 1: 0] ALUCtl,
     input                  Sign,
-    output reg [32 - 1: 0] out,
-    output                 zero
+    output reg [32 - 1: 0] out
 );
-
-    // zero means whether the output is zero or not
-    assign zero = (out == 0);
 
     // lt_signed means whether (in1 < in2) in signed number
     wire lt_signed;
